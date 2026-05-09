@@ -66,19 +66,62 @@ class Tokenizer:
         else:
             pitch = token + self.min_pitch
             return f"NOTE_ON_{pitch}"
+        
+    def clean_overlapping_same_pitch_notes(self, notes, min_duration_steps=1):
+        notes_by_pitch = {}
+        for note in notes:
+            if self.min_pitch <= note.pitch <= self.max_pitch:
+                notes_by_pitch.setdefault(note.pitch, []).append(note)
+
+        cleaned_notes = []
+
+        for pitch, pitch_notes in notes_by_pitch.items():
+            # sort notes of the same pitch by start time, then end time
+            pitch_notes = sorted(pitch_notes, key=lambda n: (n.start, n.end))
+
+            for i in range(len(pitch_notes) - 1):
+                current_note = pitch_notes[i]
+                next_note = pitch_notes[i + 1]
+
+                # if the current note overlaps the next note of the same pitch,
+                # shorten the current note.
+                if next_note.start < current_note.end:
+                    current_note.end = next_note.start
+
+            # keep only notes that still have positive duration after cleaning
+            for note in pitch_notes:
+                start_step = self.quantize_time(note.start)
+                end_step = self.quantize_time(note.end)
+
+                if end_step - start_step >= min_duration_steps:
+                    cleaned_notes.append(note)
+
+        # sort all notes globally again
+        cleaned_notes.sort(key=lambda n: (n.start, n.pitch, n.end))
+
+        return cleaned_notes
 
     # tokenization
     def tokenize(self, midi_path):
         pm = pretty_midi.PrettyMIDI(midi_path)
         events = []
 
+        notes = pm.instruments[0].notes # piano only 
+
+        # clean notes
+        notes = self.clean_overlapping_same_pitch_notes(notes)
+
         # collect note events
-        for note in pm.instruments[0].notes:
+        for note in notes:
             if self.min_pitch <= note.pitch <= self.max_pitch:
                 pitch = note.pitch - self.min_pitch
                 start = self.quantize_time(note.start)
                 end = self.quantize_time(note.end)
                 vel_bin = self.velocity_to_bin(note.velocity)
+
+                # skip notes that disappear after quantization
+                if end <= start:
+                    continue
 
                 events.append((start, "on", pitch, vel_bin))
                 events.append((end, "off", pitch, None))
@@ -141,20 +184,21 @@ class Tokenizer:
             elif token >= self.note_off_offset:
                 pitch = token - self.note_off_offset + self.min_pitch
                 if pitch in active_notes:
-                    start = active_notes[pitch]
-                    note = pretty_midi.Note(
-                        velocity=current_velocity,
-                        pitch=pitch,
-                        start=start,
-                        end=current_time
-                    )
-                    instrument.notes.append(note)
+                    start, velocity = active_notes[pitch]
+                    if current_time > start:
+                        note = pretty_midi.Note(
+                            velocity=velocity,
+                            pitch=pitch,
+                            start=start,
+                            end=current_time
+                        )
+                        instrument.notes.append(note)
                     del active_notes[pitch]
 
             # NOTE_ON
             else:
                 pitch = token + self.min_pitch
-                active_notes[pitch] = current_time
+                active_notes[pitch] = (current_time, current_velocity)
 
         pm.instruments.append(instrument)
         if output_path is not None:
