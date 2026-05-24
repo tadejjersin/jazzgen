@@ -44,9 +44,8 @@ def render_midi_to_audio_array(
         cmd = [
             str(fluidsynth_exe),
             "-ni",
-            "-a", "file",
-            "-o", "audio.file.type=wav",
-            "-o", f"audio.file.name={wav_path}",
+            "-T", "wav",
+            "-F", str(wav_path),
             "-r", str(sample_rate),
             str(soundfont_path),
             str(midi_path),
