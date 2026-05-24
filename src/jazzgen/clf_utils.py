@@ -5,6 +5,23 @@ from .midi_utils import render_midi_to_audio_array
 MODEL_ID = "mtg-upf/discogs-maest-10s-pw-129e"
 TARGET_SR = 16000
 
+GENRES = [
+    "Jazz",
+    "Non-Music",
+    "Blues",
+    "Pop",
+    "Stage & Screen",
+    "Classical",
+    "Electronic",
+    "Folk, World, & Country",
+    "Funk / Soul",
+    "Latin",
+    "Rock",
+    "Hip Hop",
+    "Children's",
+    "Reggae",
+    "Brass & Military",
+]
 
 def load_discogs_maest_pipeline(device=-1):
     """Load the Discogs MAEST audio-classification pipeline."""
@@ -20,7 +37,7 @@ def load_discogs_maest_pipeline(device=-1):
 def classify_audio_style(
     audio,
     clf,
-    top_k: int = 100,
+    top_k=400,
 ):
     """Classify the musical style of an audio array."""
 
@@ -36,46 +53,26 @@ def classify_audio_style(
 def prediction_score(
     predictions,
 ):
-    """Compute a heuristic jazz-family and classical-family score from classifier predictions."""
+    """Sum predictions by genre groups."""
 
-    jazz_sum = 0.0
-    jazz_best_score = 0.0
-    jazz_best = None
-
-    classical_sum = 0.0 
-    classical_best_score = 0.0
-    classical_best = None
+    genre_sums = {genre.lower(): 0.0 for genre in GENRES}
 
     for pred in predictions:
         label = pred["label"].lower()
         pred_score = float(pred["score"])
 
-        # jazz label
-        if label.startswith("jazz"):
-            jazz_sum += pred_score
-            if pred_score > jazz_best_score:
-                jazz_best = label
-                jazz_best_score = pred_score
+        for genre in GENRES:
+            if label.startswith(genre.lower()):
+                genre_sums[genre.lower()] += pred_score
 
-        # classical label
-        if label.startswith("classical"):
-            classical_sum += pred_score
-            if pred_score > classical_best_score:
-                classical_best = label
-                classical_best_score = pred_score
-
-    return {
-        "jazz": (jazz_sum, jazz_best_score, jazz_best),
-        "classical": (classical_sum, classical_best_score, classical_best)
-    }
-
+    return genre_sums
 
 def evaluate_audio(
     audio,
     clf,
-    top_k=100,
+    top_k=400,
 ):
-    """Classify audio style and process predictions for a jazz vs. classical comparison."""
+    """Classify audio style and group predictions by genre."""
 
     predictions = classify_audio_style(
         audio=audio,
