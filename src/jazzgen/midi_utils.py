@@ -5,6 +5,7 @@ import subprocess
 import librosa
 import numpy as np
 import soundfile as sf
+import pretty_midi
 
 TARGET_SR = 16000
 
@@ -99,3 +100,8 @@ def render_midi_to_audio_array(
         sf.write(save_path, audio, target_sample_rate)
 
     return audio
+
+def save_first_notes(midi_path, save_path, n=10):
+    pm = pretty_midi.PrettyMIDI(midi_path)
+    del pm.instruments[0].notes[n:]
+    pm.write(save_path)
