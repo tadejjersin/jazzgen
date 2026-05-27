@@ -31,6 +31,7 @@ def load_model(adapter_path=None):
         return tokenizer, base_model
     
 def generate_midi(base_midi_path, save_midi_path, tokenizer, model, max_length=1000, temperature=1.1, top_p=0.95):
+    model.eval()
     prompt = tokenizer.encode_from_file(
         base_midi_path,
         return_tensors="pt",

@@ -207,6 +207,9 @@ marimo/_lsp/
 __marimo__/
 
 
-data
+midi_kong
 old
 aria_tokens
+aria_lora_attention*
+test
+fine_tuning
