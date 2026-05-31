@@ -212,4 +212,8 @@ old
 aria_tokens
 aria_lora_attention*
 test
-fine_tuning
+fine_tuning*
+data/custom/results
+notebooks/audio
+notebooks/midi
+notebooks/fig
