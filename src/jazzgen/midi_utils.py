@@ -9,11 +9,13 @@ import pretty_midi
 
 TARGET_SR = 16000
 
+FLUIDSYNTH_EXE = "fluidsynth"
+SOUNDFONT_PATH = r""
 
 def render_midi_to_audio_array(
     midi_input,
-    soundfont_path=r"C:\Users\tadej\soundfonts\MuseScore_General.sf2",
-    fluidsynth_exe="fluidsynth",
+    soundfont_path=SOUNDFONT_PATH,
+    fluidsynth_exe=FLUIDSYNTH_EXE,
     sample_rate=44100,
     target_sample_rate=TARGET_SR,
     normalize=True,
